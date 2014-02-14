@@ -2,12 +2,13 @@
 
 /* App Module */
 
-var <%= angularAppName %> = angular.module('<%= angularAppName %>', ['http-auth-interceptor', 'ngResource', 'ngRoute', 'ngCookies', 'pascalprecht.translate']);
+var <%= angularAppName %> = angular.module('<%= angularAppName %>', [<%= this.useSecurity ? "'http-auth-interceptor', " : ""%> 'ngResource', 'ngRoute', 'ngCookies', 'pascalprecht.translate']);
 
 <%= angularAppName %>
     .config(['$routeProvider', '$httpProvider', '$translateProvider',
         function ($routeProvider, $httpProvider, $translateProvider) {
             $routeProvider
+              <% if (this.useSecurity) { %>
                 .when('/login', {
                     templateUrl: 'views/login.html',
                     controller: 'LoginController'
@@ -25,6 +26,11 @@ var <%= angularAppName %> = angular.module('<%= angularAppName %>', ['http-auth-
                     templateUrl: 'views/password.html',
                     controller: 'PasswordController'
                 })
+                .when('/logout', {
+                    templateUrl: 'views/main.html',
+                    controller: 'LogoutController'
+                })
+              <% } %>
                 .when('/sessions', {
                     templateUrl: 'views/sessions.html',
                     controller: 'SessionsController',
@@ -56,10 +62,6 @@ var <%= angularAppName %> = angular.module('<%= angularAppName %>', ['http-auth-
                         }]
                     }
                 })
-                .when('/logout', {
-                    templateUrl: 'views/main.html',
-                    controller: 'LogoutController'
-                })
                 .otherwise({
                     templateUrl: 'views/main.html',
                     controller: 'MainController'
@@ -75,65 +77,65 @@ var <%= angularAppName %> = angular.module('<%= angularAppName %>', ['http-auth-
 
             // remember language
             $translateProvider.useCookieStorage();
-        }])
+        }])<% if (this.useSecurity) { %>
         .run(['$rootScope', '$location', 'AuthenticationSharedService', 'Account',
-            function($rootScope, $location, AuthenticationSharedService, Account) {
-            $rootScope.hasRole = function(role) {
-                if ($rootScope.account === undefined) {
-                    return false;
-                }
+          function($rootScope, $location, AuthenticationSharedService, Account) {
+          $rootScope.hasRole = function(role) {
+              if ($rootScope.account === undefined) {
+                  return false;
+              }
 
-                if ($rootScope.account.roles === undefined) {
-                    return false;
-                }
+              if ($rootScope.account.roles === undefined) {
+                  return false;
+              }
 
-                if ($rootScope.account.roles[role] === undefined) {
-                    return false;
-                }
+              if ($rootScope.account.roles[role] === undefined) {
+                  return false;
+              }
 
-                return $rootScope.account.roles[role];
-            };
+              return $rootScope.account.roles[role];
+          };
 
-            $rootScope.$on("$routeChangeStart", function(event, next, current) {
-                // Check if the status of the user. Is it authenticated or not?
-                AuthenticationSharedService.authenticate({}, function() {
-                    $rootScope.authenticated = true;
-                });
-            });
+          $rootScope.$on("$routeChangeStart", function(event, next, current) {
+              // Check if the status of the user. Is it authenticated or not?
+              AuthenticationSharedService.authenticate({}, function() {
+                  $rootScope.authenticated = true;
+              });
+          });
 
-            // Call when the 401 response is returned by the client
-            $rootScope.$on('event:auth-loginRequired', function(rejection) {
-                $rootScope.authenticated = false;
-                if ($location.path() !== "/" && $location.path() !== "") {
-                    $location.path('/login').replace();
-                }
-            });
+          // Call when the 401 response is returned by the client
+          $rootScope.$on('event:auth-loginRequired', function(rejection) {
+              $rootScope.authenticated = false;
+              if ($location.path() !== "/" && $location.path() !== "") {
+                  $location.path('/login').replace();
+              }
+          });
 
-            // Call when the user is authenticated
-           $rootScope.$on('event:auth-authConfirmed', function() {
-               $rootScope.authenticated = true;
-               $rootScope.account = Account.get();
+          // Call when the user is authenticated
+         $rootScope.$on('event:auth-authConfirmed', function() {
+             $rootScope.authenticated = true;
+             $rootScope.account = Account.get();
 
-               // If the login page has been requested and the user is already logged in
-               // the user is redirected to the home page
-               if ($location.path() === "/login") {
-                   $location.path('/').replace();
-               }
-            });
+             // If the login page has been requested and the user is already logged in
+             // the user is redirected to the home page
+             if ($location.path() === "/login") {
+                 $location.path('/').replace();
+             }
+          });
 
-            // Call when the user logs in
-            $rootScope.$on('event:auth-loginConfirmed', function() {
-                $rootScope.authenticated = true;
-                $rootScope.account = Account.get();
-                $location.path('').replace();
-            });
+          // Call when the user logs in
+          $rootScope.$on('event:auth-loginConfirmed', function() {
+              $rootScope.authenticated = true;
+              $rootScope.account = Account.get();
+              $location.path('').replace();
+          });
 
-            // Call when the user logs out
-            $rootScope.$on('event:auth-loginCancelled', function() {
-                $rootScope.authenticated = false;
-                $location.path('');
-            });
-        }])<% if (websocket == 'atmosphere') { %>
+          // Call when the user logs out
+          $rootScope.$on('event:auth-loginCancelled', function() {
+              $rootScope.authenticated = false;
+              $location.path('');
+          });
+        }])<% } %><% if (websocket == 'atmosphere') { %>
         .run(['$rootScope', '$route',
             function($rootScope, $route) {
                 // This uses the Atmoshpere framework to do a Websocket connection with the server, in order to send
